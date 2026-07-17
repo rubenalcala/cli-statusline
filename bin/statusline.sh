@@ -82,6 +82,11 @@ else
 fi
 
 # ─── Parse JSON from stdin (Single jq pass for performance) ──────────────────
+# `set +e` guards this block: when the last jq field is empty (e.g. no
+# effort.level), command substitution strips it, so the final `read` hits a
+# genuine EOF and returns non-zero even though every variable got assigned —
+# under `set -e` that silently aborted the whole script before any output.
+set +e
 {
   read -r STATE
   read -r USED_PCT
@@ -187,6 +192,7 @@ fi
     (.effort.level // "")
   ' 2>/dev/null || printf "idle\n0\n\nfalse\n\n\nfalse\nfalse\n0\n0\n0\n\n\n80\n\n\n\n0\n0\n0\n0\n100\n-1\n-1\n-1\n-1\n\n\n\n0\n0\n\n"
 )"
+set -e
 
 # Set dynamic width boundaries
 if [ "$COLS" -ge 180 ]; then
@@ -248,8 +254,6 @@ if [ "$USE_CLASSIC_ICONS" = "true" ]; then
 
   BG_META="${FG_GRAY}"
   FG_META_TEXT=""
-  
-  BAR_BG_COLOR=""
 else
   DOT_L1="${FG_GRAY} | ${R}"
   DOT_L2="${FG_GRAY} | ${R}"
@@ -306,8 +310,6 @@ else
   # Soft slate grey matching the active palette (238)
   BG_META="\033[48;5;236m"
   FG_META_TEXT="\033[38;5;250m"
-  
-  BAR_BG_COLOR="238"
 fi
 
 # ─── Helper Functions ─────────────────────────────────────────────────────────
@@ -460,9 +462,9 @@ make_quota_bar() {
   local separator=""
   if [ "$show_separator" = "true" ]; then
     if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-      separator="${FG_GRAY} · ${R}"
+      separator=" | "
     else
-      separator="  "
+      separator=" ${FG_GRAY}│${R} "
     fi
   fi
   
@@ -475,7 +477,7 @@ make_quota_bar() {
         bar="${bar}░"
       fi
     done
-    echo -n "${separator}${FG_BRIGHT_WHITE}${B}${label}${R} ${FG_GRAY}${bar} N/A${R}"
+    echo -n "${separator}${FG_BRIGHT_WHITE}${B}${label}${R} ${FG_GRAY}${bar}  N/A${R}"
     return
   fi
 
@@ -510,9 +512,9 @@ make_quota_bar() {
   for ((i = 0; i < QUOTA_BAR_LEN; i++)); do
     if [ "$i" -lt "$filled" ]; then
       if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-        bar="${bar}█"
+        bar="${bar}▬"
       else
-        bar="${bar}\033[38;5;${bar_color_num}m█\033[39m"
+        bar="${bar}\033[38;5;${bar_color_num}m▬\033[39m"
       fi
     elif [ "$i" -eq "$filled" ]; then
       if [ "$USE_CLASSIC_ICONS" = "true" ]; then
@@ -522,28 +524,28 @@ make_quota_bar() {
         else                               bar="${bar}·"
         fi
       else
-        if [ "$remainder" -ge 75 ]; then
-          bar="${bar}\033[38;5;${bar_color_num}m▓\033[39m"
-        elif [ "$remainder" -ge 50 ]; then
-          bar="${bar}\033[38;5;${bar_color_num}m▒\033[39m"
-        elif [ "$remainder" -ge 25 ]; then
-          bar="${bar}\033[38;5;${bar_color_num}m░\033[39m"
+        if [ "$remainder" -ge 50 ]; then
+          bar="${bar}\033[38;5;${bar_color_num}m▬\033[39m"
         else
-          bar="${bar}\033[38;5;240m░\033[39m"
+          bar="${bar}\033[2m\033[38;5;${bar_color_num}m▬\033[0m"
         fi
       fi
     else
       if [ "$USE_CLASSIC_ICONS" = "true" ]; then
         bar="${bar}·"
       else
-        bar="${bar}\033[38;5;240m░\033[39m"
+        bar="${bar}\033[38;5;240m▬\033[39m"
       fi
     fi
   done
 
   local reset_str=""
   if [ -n "$reset_sec" ] && [ "$reset_sec" -gt 0 ]; then
-    reset_str=" ${FG_GRAY}$(format_reset_time "$reset_sec")${R}"
+    if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+      reset_str=" · $(format_reset_time "$reset_sec")"
+    else
+      reset_str=" ${FG_GRAY}·${R} $(format_reset_time "$reset_sec")"
+    fi
   fi
 
   if [ "$USE_CLASSIC_ICONS" = "true" ]; then
@@ -554,7 +556,7 @@ make_quota_bar() {
     if [ -z "$label_ansi" ] && [ -n "$bar_color_num" ]; then
       label_ansi="\033[38;5;${bar_color_num}m"
     fi
-    echo -n "${separator}${label_ansi}${B}${label}${R} \033[48;5;${BAR_BG_COLOR}m${bar}\033[0m ${label_ansi}${B}${val_int}%${R}${reset_str}"
+    echo -n "${separator}${label_ansi}${B}${label}${R} ${bar}  ${label_ansi}${B}${val_int}%${R}${reset_str}"
   fi
 }
 
@@ -737,7 +739,7 @@ if [ "$USE_CLASSIC_ICONS" = "true" ]; then
   BAR=""
   for ((i = 0; i < BAR_LEN; i++)); do
     if   [ "$i" -lt "$FILLED" ]; then
-      BAR="${BAR}█"
+      BAR="${BAR}▬"
     elif [ "$i" -eq "$FILLED" ]; then
       if   [ "$REMAINDER" -ge 75 ]; then BAR="${BAR}▓"
       elif [ "$REMAINDER" -ge 50 ]; then BAR="${BAR}▒"
@@ -747,28 +749,26 @@ if [ "$USE_CLASSIC_ICONS" = "true" ]; then
     else BAR="${BAR}·"
     fi
   done
-  CTX_BAR="${FG_GRAY}ctx ${FILL_COLOR}${BAR} ${NUM_COLOR}${PCT_FMT}%${R}"
+  CTX_BAR="${FG_GRAY}ctx ${FILL_COLOR}${BAR}  ${NUM_COLOR}${PCT_FMT}%${R}"
 else
   if [ "$PCT_INT" -ge 90 ]; then bar_c="197"; else bar_c="214"; fi
   BAR=""
   for ((i = 0; i < BAR_LEN; i++)); do
     if   [ "$i" -lt "$FILLED" ]; then
-      BAR="${BAR}\033[38;5;${bar_c}m█\033[39m"
+      BAR="${BAR}\033[38;5;${bar_c}m▬\033[39m"
     elif [ "$i" -eq "$FILLED" ]; then
-      if   [ "$REMAINDER" -ge 75 ]; then
-        BAR="${BAR}\033[38;5;${bar_c}m▓\033[39m"
-      elif [ "$REMAINDER" -ge 50 ]; then
-        BAR="${BAR}\033[38;5;${bar_c}m▒\033[39m"
+      if [ "$REMAINDER" -ge 50 ]; then
+        BAR="${BAR}\033[38;5;${bar_c}m▬\033[39m"
       else
-        BAR="${BAR}\033[38;5;${bar_c}m░\033[39m"
+        BAR="${BAR}\033[2m\033[38;5;${bar_c}m▬\033[0m"
       fi
     else
-      BAR="${BAR}\033[38;5;240m░\033[39m"
+      BAR="${BAR}\033[38;5;240m▬\033[39m"
     fi
   done
-  
-  # Context bar formatting: ctx label and percentage transparent, only bar has BAR_BG_COLOR background (padding spaces removed)
-  CTX_BAR="${FG_YELLOW}${B}ctx${R} \033[48;5;${BAR_BG_COLOR}m${BAR}\033[0m ${FG_YELLOW}${B}${PCT_FMT}%${R}"
+
+  # Context bar formatting: half-height blocks, no solid background box
+  CTX_BAR="${FG_YELLOW}${B}ctx${R} ${BAR}  ${FG_YELLOW}${B}${PCT_FMT}%${R}"
 fi
 
 # Badges Formatting (CPU and RAM percentage transparent)
@@ -794,10 +794,10 @@ fi
 TOK_DETAILS_WIDE=""
 TOK_DETAILS_MED=""
   if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-    TOK_DETAILS_WIDE=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})  ${FG_YELLOW}${B}in${R} ${INPUT_TOK_FMT}  ${FG_YELLOW}${B}out${R} ${OUTPUT_TOK_FMT}"
+    TOK_DETAILS_WIDE=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT}) | in ${INPUT_TOK_FMT} · out ${OUTPUT_TOK_FMT}"
     TOK_DETAILS_MED=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})"
   else
-    TOK_DETAILS_WIDE=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})  ${FG_YELLOW}${B}in${R} ${INPUT_TOK_FMT}  ${FG_YELLOW}${B}out${R} ${OUTPUT_TOK_FMT}"
+    TOK_DETAILS_WIDE=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT}) ${FG_GRAY}│${R} ${FG_YELLOW}${B}in${R} ${INPUT_TOK_FMT} ${FG_GRAY}·${R} ${FG_YELLOW}${B}out${R} ${OUTPUT_TOK_FMT}"
     TOK_DETAILS_MED=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})"
   fi
 
@@ -879,17 +879,23 @@ fi
 
 # Line 1: Model (left), Git Branch, and RAM (all left-aligned, one after another)
 LINE1_LEFT=""
+line1_sep=" "
+line1_cpu_ram_sep=" "
+if [ "$USE_CLASSIC_ICONS" = "true" ]; then
+  line1_sep=" · "
+  line1_cpu_ram_sep=" · "
+else
+  line1_sep=" ${FG_GRAY}│${R} "
+  line1_cpu_ram_sep=" ${FG_GRAY}·${R} "
+fi
+
 if [ -n "$MODEL_DISP" ]; then
   LINE1_LEFT="${line_pref1}${FG_BRIGHT_WHITE}${B}${MODEL_DISP}${R}"
 fi
 
 if [ -n "$repo_text" ]; then
   if [ -n "$LINE1_LEFT" ]; then
-    if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-      LINE1_LEFT="${LINE1_LEFT} · ${repo_text}"
-    else
-      LINE1_LEFT="${LINE1_LEFT}  ${repo_text}"
-    fi
+    LINE1_LEFT="${LINE1_LEFT}${line1_sep}${repo_text}"
   else
     LINE1_LEFT="${line_pref1}${repo_text}"
   fi
@@ -897,11 +903,7 @@ fi
 
 if [ -n "$CPU_FMT" ]; then
   if [ -n "$LINE1_LEFT" ]; then
-    if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-      LINE1_LEFT="${LINE1_LEFT} · ${CPU_FMT}"
-    else
-      LINE1_LEFT="${LINE1_LEFT}  ${CPU_FMT}"
-    fi
+    LINE1_LEFT="${LINE1_LEFT}${line1_sep}${CPU_FMT}"
   else
     LINE1_LEFT="${line_pref1}${CPU_FMT}"
   fi
@@ -909,10 +911,10 @@ fi
 
 if [ -n "$SYS_FMT" ]; then
   if [ -n "$LINE1_LEFT" ]; then
-    if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-      LINE1_LEFT="${LINE1_LEFT} · ${SYS_FMT}"
+    if [ -n "$CPU_FMT" ]; then
+      LINE1_LEFT="${LINE1_LEFT}${line1_cpu_ram_sep}${SYS_FMT}"
     else
-      LINE1_LEFT="${LINE1_LEFT}  ${SYS_FMT}"
+      LINE1_LEFT="${LINE1_LEFT}${line1_sep}${SYS_FMT}"
     fi
   else
     LINE1_LEFT="${line_pref1}${SYS_FMT}"
@@ -937,11 +939,13 @@ LINE3_LEFT=""
 LINE3_RIGHT=""
 if [ "$HAS_QUOTAS" = "true" ]; then
   LINE3_LEFT="${line_pref3}"
+  q5h_printed=false
   if [ -n "$Q_5H" ] && [ "$Q_5H" != "-1" ] && [ "$Q_5H" != "" ]; then
     LINE3_LEFT="${LINE3_LEFT}$(make_quota_bar "$Q_5H" "5H" "37" "$Q_5H_R" false)"
+    q5h_printed=true
   fi
   if [ -n "$Q_WK" ] && [ "$Q_WK" != "-1" ] && [ "$Q_WK" != "" ]; then
-    LINE3_LEFT="${LINE3_LEFT}$(make_quota_bar "$Q_WK" "7D" "135" "$Q_WK_R" true)"
+    LINE3_LEFT="${LINE3_LEFT}$(make_quota_bar "$Q_WK" "7D" "135" "$Q_WK_R" $q5h_printed)"
   fi
 fi
 

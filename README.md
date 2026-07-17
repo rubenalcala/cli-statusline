@@ -8,9 +8,9 @@ The statusline renders exactly 3 lines (or 2 if quotas are not present), automat
 
 ### Rendering Example (Terminal width: 100 columns)
 ```text
-╭─Sonnet 5 (high)  main*  CPU:17%  RAM:65%                                                          
-├─ctx ▒░░░░░░░░░ 8% (15K/200K)  in 12K  out 3K                                                      
-╰─5H ███████▒ 95%  7D █████░░░ 65% 3d 4h                                                            
+╭─Sonnet 5 (high) │ main* │ CPU:17% · RAM:65%                                                       
+├─ctx ▒░░░░░░░░░ 8% (15K/200K) │ in 12K · out 3K                                                    
+╰─5H ███████▒ 95% · 2h 45m │ 7D █████░░░ 65% · 3d 4h                                                
 ```
 
 | Line | Left Side Component | Right Side Component |
