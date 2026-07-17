@@ -37,7 +37,7 @@ The statusline renders exactly 3 lines (or 2 if quotas are not present), automat
 ## Installation
 
 ```bash
-git clone https://github.com/rubenalcala/claude-statusline)
+git clone https://github.com/rubenalcala/claude-statusline
 cd claude-statusline
 bash bin/install.sh
 ```
