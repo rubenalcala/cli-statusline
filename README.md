@@ -1,6 +1,6 @@
 # claude-statusline
 
-Status line for **Claude Code** (`claude`) — displays the active model, session context usage, git branch, host memory (RAM), and real-time quota consumption.
+Status line for **Claude Code** (`claude`) — displays the active model, session context usage, git branch, host memory (RAM & CPU), and real-time quota consumption.
 
 ## What it shows
 
