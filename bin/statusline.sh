@@ -114,6 +114,7 @@ fi
   read -r USER_EMAIL
   read -r TURN_INPUT_TOKENS
   read -r TURN_OUTPUT_TOKENS
+  read -r EFFORT_LEVEL
 } <<< "$(
   echo "$INPUT_JSON" | jq -r '
     (.agent_state // "idle"),
@@ -182,8 +183,9 @@ fi
     (.plan_tier // ""),
     (.email // ""),
     (.context_window.current_usage.input_tokens // 0),
-    (.context_window.current_usage.output_tokens // 0)
-  ' 2>/dev/null || printf "idle\n0\n\nfalse\n\n\nfalse\nfalse\n0\n0\n0\n\n\n80\n\n\n\n0\n0\n0\n0\n100\n-1\n-1\n-1\n-1\n\n\n\n0\n0\n"
+    (.context_window.current_usage.output_tokens // 0),
+    (.effort.level // "")
+  ' 2>/dev/null || printf "idle\n0\n\nfalse\n\n\nfalse\nfalse\n0\n0\n0\n\n\n80\n\n\n\n0\n0\n0\n0\n100\n-1\n-1\n-1\n-1\n\n\n\n0\n0\n\n"
 )"
 
 # Set dynamic width boundaries
@@ -325,9 +327,9 @@ human_format() {
     return
   fi
   if [ "$num" -ge 1000000 ] 2>/dev/null; then
-    echo "$((num / 1000000)).$(((num % 1000000) / 100000))M"
+    echo "$(((num + 500000) / 1000000))M"
   elif [ "$num" -ge 1000 ] 2>/dev/null; then
-    echo "$((num / 1000)).$(((num % 1000) / 100))K"
+    echo "$(((num + 500) / 1000))K"
   else
     echo "$num"
   fi
@@ -791,21 +793,18 @@ fi
 # Token Counters Details
 TOK_DETAILS_WIDE=""
 TOK_DETAILS_MED=""
-if [ "$CTX_USED" -gt 0 ] 2>/dev/null; then
-  turn_str=""
-  if [ "$TURN_INPUT_TOKENS" -gt 0 ] || [ "$TURN_OUTPUT_TOKENS" -gt 0 ]; then
-    turn_str=" | turn: +${TURN_INPUT_FMT}/${TURN_OUTPUT_FMT}"
-  fi
   if [ "$USE_CLASSIC_ICONS" = "true" ]; then
-    TOK_DETAILS_WIDE=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})${DOT_L2}(total: ${INPUT_TOK_FMT}/${OUTPUT_TOK_FMT}${turn_str})"
+    TOK_DETAILS_WIDE=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})  ${FG_YELLOW}${B}in${R} ${INPUT_TOK_FMT}  ${FG_YELLOW}${B}out${R} ${OUTPUT_TOK_FMT}"
     TOK_DETAILS_MED=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})"
   else
-    TOK_DETAILS_WIDE=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})${DOT_L2}${FG_YELLOW}${ICON_TOK_SUM} ${R} (total: ${INPUT_TOK_FMT}/${OUTPUT_TOK_FMT}${turn_str})"
+    TOK_DETAILS_WIDE=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})  ${FG_YELLOW}${B}in${R} ${INPUT_TOK_FMT}  ${FG_YELLOW}${B}out${R} ${OUTPUT_TOK_FMT}"
     TOK_DETAILS_MED=" (${CTX_USED_FMT}/${CTX_LIMIT_FMT})"
   fi
-fi
 
 MODEL_DISP="${MODEL_NAME:-$MODEL_ID}"
+if [ -n "$EFFORT_LEVEL" ] && [ "$EFFORT_LEVEL" != "null" ]; then
+  MODEL_DISP="${MODEL_DISP} (${EFFORT_LEVEL})"
+fi
 
 # ─── Formatting First-Line as clean transparent text ───────────────────────
 repo_text=""
@@ -924,9 +923,9 @@ LINE1_RIGHT=""
 
 # Line 2: Context Bar (left) and no right segment (RAM moved to line 1)
 # Dynamically scale token details based on terminal width to prevent line wrapping
-if [ "$COLS" -ge 150 ]; then
+if [ "$COLS" -ge 80 ]; then
   LINE2_LEFT="${line_pref2}${CTX_BAR}${TOK_DETAILS_WIDE}"
-elif [ "$COLS" -ge 110 ]; then
+elif [ "$COLS" -ge 60 ]; then
   LINE2_LEFT="${line_pref2}${CTX_BAR}${TOK_DETAILS_MED}"
 else
   LINE2_LEFT="${line_pref2}${CTX_BAR}"
