@@ -48,7 +48,7 @@ if [ ! -f "$SETTINGS_FILE" ]; then
     echo '{}' > "$SETTINGS_FILE"
 fi
 
-STATUS_CMD='bash "$HOME/.claude/statusline.sh"'
+STATUS_CMD="bash \"$HOME/.claude/statusline.sh\""
 CURRENT_CMD=$(jq -r '.statusLine.command // ""' "$SETTINGS_FILE" 2>/dev/null)
 
 if [ "$CURRENT_CMD" = "$STATUS_CMD" ]; then
