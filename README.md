@@ -10,11 +10,9 @@ The statusline renders exactly 3 lines (or 2 if quotas are not present), automat
 
 ### Screenshots
 
-#### Antigravity CLI (`agy`)
-![Antigravity CLI Statusline](assets/agy.png)
-
-#### Claude Code (`claude`)
-![Claude Code Statusline](assets/claude.png)
+| Antigravity CLI (`agy`) | Claude Code (`claude`) |
+| :---: | :---: |
+| ![Antigravity CLI Statusline](assets/agy.png) | ![Claude Code Statusline](assets/claude.png) |
 
 | Line | Left Side Component | Right Side Component |
 |------|---------------------|----------------------|
