@@ -8,12 +8,13 @@ Status line for **Claude Code** (`claude`) and **Antigravity CLI** (`agy`) — d
 
 The statusline renders exactly 3 lines (or 2 if quotas are not present), automatically padding elements inside a structured box frame that scales seamlessly when you resize your terminal (without elements wrapping or splitting into extra lines):
 
-### Rendering Example (Terminal width: 100 columns)
-```text
-╭─Sonnet 5 (high) │ main* │ CPU:17% · RAM:65%                                                       
-├─ctx ▬▬▬▬▬▬▬▬▬▬ 8% (15K/200K) │ in 12K · out 3K                                                    
-╰─5H ▬▬▬▬▬▬▬▬ 95% · 2h 45m │ 7D ▬▬▬▬▬▬▬▬ 65% · 3d 4h                                                
-```
+### Screenshots
+
+#### Antigravity CLI (`agy`)
+![Antigravity CLI Statusline](assets/agy.png)
+
+#### Claude Code (`claude`)
+![Claude Code Statusline](assets/claude.png)
 
 | Line | Left Side Component | Right Side Component |
 |------|---------------------|----------------------|
